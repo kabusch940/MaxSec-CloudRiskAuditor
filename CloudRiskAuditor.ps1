@@ -11,25 +11,36 @@ $unclassifiedServers    = [System.Collections.ArrayList]@()
 [string]$newServerInput = Read-Host "Enter Servers to be added to the inventory (Comma seperated), or press Enter to skip"
 
 
-# Add New Server to Inventory
+# Add New Server to Inventory and Check Duplicates
 
 if($newServerInput){
     $newServers = $newServerInput -split ',' | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ -ne '' }
-} foreach($newServer in $newServers){
-    if ($newServer -like "*file*") {
-        $fileServers += $newServer | Out-Null
+    foreach($newServer in $newServers){
+    if ($fileServers -contains $newServer -or
+            $DCs -contains $newServer -or
+            $dbServers -contains $newServer -or
+            $unclassifiedServers -contains $newServer) {
+            
+            Write-Host "$newServer already exists. Skipped."
+            continue
+        }
+    elseif ($newServer -like "*file*") {
+        $fileServers.Add($newServer) | Out-Null
         Write-Host $newServer "added to Fileservers"
     } elseif($newServer -like "*dc*") {
-        $DCs += $newServer | Out-Null
+        $DCs.Add($newServer) | Out-Null
         Write-Host $newServer "added to DCs"
     } elseif ($newServer -like "*db*") {
-        $dbServers += $newServer | Out-Null
+        $dbServers.Add($newServer) | Out-Null
         Write-Host $newServer "added to DBServers"
     } else {
         $unclassifiedServers += $newServer | Out-Null
         Write-Host $newServer "is unclassified."
     }
 }
+} 
+
+
 
 
 
