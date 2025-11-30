@@ -1,42 +1,58 @@
-## Check JSON Inventory List
-
-$inventoryObject = @{
-    "fileServers" = $fileServers;
-    "dbServers" = $dbServers; 
-    "DCs" = $DCs;
-    "unclassifiedServers" = $unclassifiedServers;
-    "LastUpdated" = (Get-Date)
-}
-
-$WD = Get-Location
-
-$inventoryExists = Test-Path "\InventoryList.json"
-
-if($inventoryExists){
-    Write-Host "Inventory Liste wurde gefunden."
-} else{
-    $createInventory = Read-Host "Inventory Liste nicht gefunden. Soll eine neue erstellt werden? (J/N)"
-    if($createInventory -eq "J"){
-    New-Item -Path $WD -ItemType "File" -Name "InventoryList.json"
-    $inventoryObject | ConvertTo-Json | Set-Content -Path ./InventoryList.json
-    Write-Host "InventoryList.json was created at" $WD
-} elseif ($createInventory -eq "j") {
-    New-Item -Path $WD -ItemType "File" -Name "InventoryList.json"
-    $inventoryObject | ConvertTo-Json | Set-Content -Path ./InventoryList.json
-    Write-Host "InventoryList.json was created at" $WD}
-    else {
-        Write-Host "No Inventory List was found"
-    }
-}
-
-
-
 ## Inventory System ArrayLists
 
 $dbServers              = [System.Collections.ArrayList]@()
 $fileServers            = [System.Collections.ArrayList]@()
 $DCs                    = [System.Collections.ArrayList]@()
 $unclassifiedServers    = [System.Collections.ArrayList]@()
+
+## Test if Inventory exists in current path
+
+$WD = Get-Location
+$inventoryExists = Test-Path ".\InventoryList.json"
+
+## Create Inventory
+
+if($inventoryExists){
+    Write-Host "Inventory was found at:" $WD
+    $jsonData = Get-Content -Path ".\InventoryList.json" -Raw
+    $inventoryObject = $jsonData | ConvertFrom-Json
+    Write-Host "Inventory JSON successfully loaded."
+} else {
+    $createInventory = Read-Host "Inventory Liste nicht gefunden. Soll eine neue erstellt werden? (J/N)"
+
+    if ($createInventory -match "^[Jj]$") {
+
+        # Create JSON Object
+        $inventoryObject = @{
+            fileServers         = @()
+            dbServers           = @()
+            DCs                 = @()
+            unclassifiedServers = @()
+            LastUpdated         = (Get-Date)
+        }
+
+        # Write JSON to File
+        $inventoryObject |
+            ConvertTo-Json -Depth 5 |
+            Set-Content -Path ".\InventoryList.json"
+
+        Write-Host "InventoryList.json was created at" $WD
+    }
+    else {
+        Write-Host "No Inventory List was found"
+        exit
+    }
+}
+
+
+## Add Data to ArrayLists
+
+if($inventoryExists){
+$fileServers.AddRange($inventoryObject.fileServers)
+$dbServers.AddRange($inventoryObject.dbServers)
+$DCs.AddRange($inventoryObject.DCs)
+$unclassifiedServers.AddRange($inventoryObject.unclassifiedServers)
+}
 
 
 # Input New Servers
@@ -74,8 +90,20 @@ if($newServerInput){
 } 
 
 
+$inventoryObject = @{
+    fileServers         = $fileServers
+    dbServers           = $dbServers
+    DCs                 = $DCs
+    unclassifiedServers = $unclassifiedServers
+    LastUpdated         = (Get-Date)
+}
 
+$inventoryObject |
+    ConvertTo-Json -Depth 5 |
+    Set-Content ".\InventoryList.json"
 
+Write-Host "Current Inventory is:"
 
+$inventoryObject
 
 
